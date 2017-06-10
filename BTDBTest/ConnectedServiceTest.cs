@@ -198,12 +198,17 @@ namespace BTDBTest
         public void ClientServiceDeallocedWhenNotneeded()
         {
             _first.RegisterLocalService(new Adder());
-            var weakAdder = new WeakReference(_second.QueryRemoteService<IAdder>());
+            var weakAdder = GetWeakAdder();
             GC.Collect();
             GC.WaitForPendingFinalizers();
             Assert.False(weakAdder.IsAlive);
             var adder = _second.QueryRemoteService<IAdder>();
             Assert.Equal(2, adder.Add(1, 1));
+        }
+
+        private WeakReference GetWeakAdder()
+        {
+            return new WeakReference(_second.QueryRemoteService<IAdder>());
         }
 
         [Fact]

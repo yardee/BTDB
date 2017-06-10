@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using BTDB.Buffer;
 using BTDB.KVDBLayer;
 using BTDB.StreamLayer;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("BTDBTest")]
 
 namespace BTDB.ChunkCache
 {

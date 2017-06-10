@@ -65,52 +65,14 @@ namespace BTDBTest
                 .Dup()
                 .Stloc(local)
                 .Ldstr("Test")
+#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
                 .Call(() => default(Nested).Fun(""))
+#pragma warning restore CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
                 .Ldloc(local)
                 .Ret();
             var action = method.Create();
             var n = action();
             Assert.Equal("Test", n.PassedParam);
-        }
-
-        [Fact]
-        public void ILNewestWayDebug()
-        {
-            var method = new ILBuilderDebug().NewMethod<Func<Nested>>("SampleCall");
-            var il = method.Generator;
-            var local = il.DeclareLocal(typeof(Nested), "n");
-            il
-                .Newobj(() => new Nested())
-                .Dup()
-                .Stloc(local)
-                .Ldstr("Test")
-                .Call(() => default(Nested).Fun(""))
-                .Ldloc(local)
-                .Ret();
-            var action = method.Create();
-            var n = action();
-            Assert.Equal("Test", n.PassedParam);
-        }
-
-        [Fact]
-        public void CanAccessPrivateProperties()
-        {
-            var method = new ILBuilderDebug().NewMethod<Func<int>>("PrivateAccess");
-            var il = method.Generator;
-            var local = il.DeclareLocal(typeof(Nested), "n");
-            var propertyInfos = typeof(Nested).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-            var propertyInfo = propertyInfos.First(p => p.Name == "PrivateProperty");
-            il
-                .Newobj(() => new Nested())
-                .Dup()
-                .Stloc(local)
-                .LdcI4(42)
-                .Call(propertyInfo.GetSetMethod(true))
-                .Ldloc(local)
-                .Call(propertyInfo.GetGetMethod(true))
-                .Ret();
-            var d = method.Create();
-            Assert.Equal(42, d());
         }
 
         [Fact]
@@ -124,26 +86,9 @@ namespace BTDBTest
                 .Dup()
                 .Stloc(local)
                 .Ldarg(0)
+#pragma warning disable CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
                 .Call(() => default(Nested).Fun(""))
-                .Ldloc(local)
-                .Ret();
-            var action = (Func<Nested>)method.Create("Test");
-            var n = action();
-            Assert.Equal("Test", n.PassedParam);
-        }
-
-        [Fact]
-        public void CanFixFirstParameterDebug()
-        {
-            var method = new ILBuilderDebug().NewMethod("SampleCall", typeof(Func<Nested>), typeof(string));
-            var il = method.Generator;
-            var local = il.DeclareLocal(typeof(Nested), "n");
-            il
-                .Newobj(() => new Nested())
-                .Dup()
-                .Stloc(local)
-                .Ldarg(0)
-                .Call(() => default(Nested).Fun(""))
+#pragma warning restore CS1720 // Expression will always cause a System.NullReferenceException because the type's default value is null
                 .Ldloc(local)
                 .Ret();
             var action = (Func<Nested>)method.Create("Test");
@@ -163,131 +108,12 @@ namespace BTDBTest
             public int A => _a;
         }
 
-        [Fact]
-        public void CanCallPrivateConstructor()
-        {
-            var method = new ILBuilderDebug().NewMethod<Func<PrivateConstructor>>("PrivateConstructorCall");
-            var il = method.Generator;
-            il
-                .LdcI4(42)
-                .Newobj(typeof(PrivateConstructor).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0])
-                .Ret();
-            Assert.Equal(42, method.Create()().A);
-        }
-
         public int Factorial(int n)
         {
             var ret = n;
             while (n > 2)
                 ret *= --n;
             return ret;
-        }
-
-        [Fact]
-        public void FactorialWorks()
-        {
-            var method = new ILBuilderDebug().NewMethod<Func<int, int>>("FactorialIL");
-            var il = method.Generator;
-            var finish = il.DefineLabel();
-            var next = il.DefineLabel();
-            var ret = il.DeclareLocal(typeof(int), "ret");
-            il
-                .Ldarg(0) //[n]
-                .Stloc(ret) //[]
-                .Mark(next)
-                .Ldarg(0) //[n]
-                .LdcI4(2) // [ret, 2]
-                .Blt(finish) //[]
-                .Ldarg(0) //[n]
-                .LdcI4(1) //[n, 1]
-                .Sub() //[n-1]
-                .Dup() //[n-1, n-1]
-                .Starg(0) //[n-1]
-                .Ldloc(ret) //[n-1, ret]
-                .Mul()  //[(n-1)*ret] -> ret
-                .Stloc(ret) //[ret]
-                .Br(next)
-                .Mark(finish)
-                .Ldloc(ret)
-                .Ret();
-
-            Assert.Equal(24, method.Create()(4));
-        }
-
-        [Fact]
-        public void AllocationLessDictionaryIteration()
-        {
-            var method = new ILBuilderDebug().NewMethod<Func<Dictionary<int, int>, int>>("PrintDict");
-            var il = method.Generator;
-            var sumLocal = il.DeclareLocal(typeof(int), "sum");
-            var dictType = typeof(Dictionary<int, int>);
-            var getEnumeratorMethod =
-                dictType.GetMethods().Single(m => m.Name == "GetEnumerator" && m.ReturnType.IsValueType && m.GetParameters().Length == 0);
-            var enumeratorType = getEnumeratorMethod.ReturnType;
-            var moveNextMethod = enumeratorType.GetMethod("MoveNext");
-            var currentGetter =
-                enumeratorType.GetProperties()
-                    .Single(m => m.Name == "Current" && m.PropertyType.IsValueType)
-                    .GetGetMethod();
-            var keyValuePairType = currentGetter.ReturnType;
-            var enumeratorLocal = il.DeclareLocal(enumeratorType);
-            var keyValuePairLocal = il.DeclareLocal(keyValuePairType);
-            var againLabel = il.DefineLabel("again");
-            var finishedLabel = il.DefineLabel("finished");
-            il
-                .LdcI4(0)
-                .Stloc(sumLocal)
-                .Ldarg(0)
-                .Callvirt(getEnumeratorMethod)
-                .Stloc(enumeratorLocal)
-                .Mark(againLabel)
-                .Ldloca(enumeratorLocal)
-                .Call(moveNextMethod)
-                .BrfalseS(finishedLabel)
-                .Ldloca(enumeratorLocal)
-                .Call(currentGetter)
-                .Stloc(keyValuePairLocal)
-                .Ldloca(keyValuePairLocal)
-                .Call(keyValuePairType.GetProperty("Key").GetGetMethod())
-                .Ldloc(sumLocal)
-                .Add()
-                .Stloc(sumLocal)
-                .Ldloca(keyValuePairLocal)
-                .Call(keyValuePairType.GetProperty("Value").GetGetMethod())
-                .Ldloc(sumLocal)
-                .Add()
-                .Stloc(sumLocal)
-                .BrS(againLabel)
-                .Mark(finishedLabel)
-                .Ldloca(enumeratorLocal)
-                .Constrained(enumeratorType)
-                .Callvirt(() => default(IDisposable).Dispose())
-                .Ldloc(sumLocal)
-                .Ret();
-            Assert.Equal(10, method.Create()(new Dictionary<int, int> { { 1, 2 }, { 3, 4 } }));
-        }
-
-        [Theory]
-        [InlineData("abc", 10, "abc")]
-        [InlineData("abc", 2, null)]
-        [InlineData("p_a.b.c_d.e.f_s", 7, "p_c_f_s")]
-        [InlineData("p_a.b.c_d.e.f_s", 9, "p_b.c_f_s")]
-        [InlineData("p_a.b.c_d.e.f_s", 11, "p_a.b.c_f_s")]
-        [InlineData("p_a.b.c_d.e.f_s", 12, "p_a.b.c_f_s")]
-        [InlineData("p_a.b.c_d.e.f_s", 14, "p_a.b.c_e.f_s")]
-        [InlineData("AlwaysNew_Gmc.Cloud.Infrastructure.Database.Relation_Gmc.Cloud.Infrastructure.ActionProcessing.IActionInputTable_Gmc.Cloud.MobileBackend.Actions.HandleExpiredPublicDcState.Data.ExpiredPublicDcStateInput__.dll", 80,
-                    "AlwaysNew_Database.Relation_IActionInputTable_ExpiredPublicDcStateInput__.dll")]
-        public void CanShortenDebugPathWhenNeeded(string path, int length, string expectedResult)
-        {
-            if (expectedResult == null)
-            {
-                var ex = Assert.Throws<BTDBException>(() => ILDynamicTypeDebugImpl.ShortenIfNeeded(path, length));
-                Assert.True(ex.Message.Contains(path));
-            }
-            else
-            {
-                Assert.Equal(expectedResult, ILDynamicTypeDebugImpl.ShortenIfNeeded(path, length));
-            }
         }
     }
 }
