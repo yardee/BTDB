@@ -282,7 +282,7 @@ namespace BTDBTest
             if (expectedResult == null)
             {
                 var ex = Assert.Throws<BTDBException>(() => ILDynamicTypeDebugImpl.ShortenIfNeeded(path, length));
-                Assert.True(ex.Message.Contains(path));
+                Assert.Contains(path, ex.Message);
             }
             else
             {

@@ -327,10 +327,10 @@ namespace BTDBTest
             _first.RegisterLocalService((Func<int>)(() => { throw new ArgumentException("msg", "te" + "st"); }));
             var d = _second.QueryRemoteService<Func<int>>();
             var e = Assert.Throws<AggregateException>(() => d());
-            Assert.Equal(1, e.InnerExceptions.Count);
+            Assert.Single(e.InnerExceptions);
             var inner = e.InnerExceptions[0];
             Assert.IsType<ArgumentException>(inner);
-            Assert.True(((ArgumentException)inner).Message.StartsWith("msg"));
+            Assert.StartsWith("msg", ((ArgumentException)inner).Message);
             Assert.Equal("test", ((ArgumentException)inner).ParamName);
         }
 

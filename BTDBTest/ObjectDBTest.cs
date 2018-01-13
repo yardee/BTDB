@@ -95,7 +95,7 @@ namespace BTDBTest
         {
             using (var tr = _db.StartTransaction())
             {
-                Assert.Equal(0, tr.Enumerate<Person>().Count());
+                Assert.Empty(tr.Enumerate<Person>());
             }
         }
 
@@ -271,7 +271,7 @@ namespace BTDBTest
                 tr.Store(p);
                 Assert.Equal(2, tr.Enumerate<Person>().Count());
                 tr.Delete(p);
-                Assert.Equal(1, tr.Enumerate<Person>().Count());
+                Assert.Single(tr.Enumerate<Person>());
                 tr.Commit();
             }
         }
@@ -713,7 +713,7 @@ namespace BTDBTest
             using (var tr = _db.StartTransaction())
             {
                 var root = tr.Singleton<InlineDictionary>();
-                Assert.Equal(0, root.Int2String.Count);
+                Assert.Empty(root.Int2String);
                 root.Int2String = null;
                 tr.Store(root);
                 tr.Commit();
@@ -776,7 +776,7 @@ namespace BTDBTest
             using (var tr = _db.StartTransaction())
             {
                 var root = tr.Singleton<InlineList>();
-                Assert.Equal(0, root.IntList.Count);
+                Assert.Empty(root.IntList);
                 root.IntList = null;
                 tr.Store(root);
                 tr.Commit();
@@ -1558,7 +1558,7 @@ namespace BTDBTest
             }
             using (var tr = _db.StartTransaction())
             {
-                Assert.Equal(1, tr.Enumerate<Person>().Count());
+                Assert.Single(tr.Enumerate<Person>());
                 var d = tr.Singleton<IndirectValueDict>();
                 Assert.Equal(10u, d.Dict[1].Value.Age);
                 Assert.Null(d.Dict[2].Value);
@@ -1583,7 +1583,7 @@ namespace BTDBTest
             }
             using (var tr = _db.StartTransaction())
             {
-                Assert.Equal(1, tr.Enumerate<Person>().Count());
+                Assert.Single(tr.Enumerate<Person>());
                 var d = tr.Singleton<IndirectValueDict>();
                 Assert.Equal(10u, d.Dict[1].Value.Age);
                 Assert.Null(d.Dict[2].Value);
