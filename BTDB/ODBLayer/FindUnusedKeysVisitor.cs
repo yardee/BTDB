@@ -119,7 +119,7 @@ namespace BTDB.ODBLayer
         ByteBuffer Vuint2ByteBuffer(uint v)
         {
             var ofs = 0;
-            PackUnpack.PackVUInt(_tempBytes, ref ofs, v);
+            PackUnpack.PackVUInt((Span<byte>) _tempBytes, ref ofs, v);
             return ByteBuffer.NewSync(_tempBytes, 0, ofs);
         }
 

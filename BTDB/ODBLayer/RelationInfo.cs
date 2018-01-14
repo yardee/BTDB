@@ -1198,7 +1198,7 @@ namespace BTDB.ODBLayer
             var o = ObjectDB.AllRelationsPKPrefix.Length;
             var prefix = new byte[o + PackUnpack.LengthVUInt(Id)];
             Array.Copy(ObjectDB.AllRelationsPKPrefix, prefix, o);
-            PackUnpack.PackVUInt(prefix, ref o, Id);
+            PackUnpack.PackVUInt((Span<byte>) prefix, ref o, Id);
             Prefix = prefix;
         }
     }

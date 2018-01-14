@@ -434,8 +434,8 @@ namespace BTDB.ODBLayer
         {
             var key = new byte[PackUnpack.LengthVUInt(tableId) + PackUnpack.LengthVUInt(tableVersion)];
             var ofs = 0;
-            PackUnpack.PackVUInt(key, ref ofs, tableId);
-            PackUnpack.PackVUInt(key, ref ofs, tableVersion);
+            PackUnpack.PackVUInt((Span<byte>) key, ref ofs, tableId);
+            PackUnpack.PackVUInt((Span<byte>) key, ref ofs, tableVersion);
             return key;
         }
 

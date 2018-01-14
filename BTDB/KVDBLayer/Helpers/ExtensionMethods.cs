@@ -18,6 +18,11 @@ namespace BTDB.KVDBLayer
             return transaction.Find(ByteBuffer.NewSync(keyBuf)) == FindResult.Exact;
         }
 
+        public static bool FindExactKey(this IKeyValueDBTransaction transaction, Span<byte> keyBuf)
+        {
+            return transaction.Find(keyBuf) == FindResult.Exact;
+        }
+
         public static bool CreateOrUpdateKeyValueUnsafe(this IKeyValueDBTransaction transaction, byte[] keyBuf, byte[] valueBuf)
         {
             return transaction.CreateOrUpdateKeyValue(ByteBuffer.NewAsync(keyBuf), ByteBuffer.NewAsync(valueBuf));

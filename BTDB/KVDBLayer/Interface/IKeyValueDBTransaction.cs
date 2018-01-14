@@ -44,6 +44,7 @@ namespace BTDB.KVDBLayer
         /// Try to find key exactly, then try previous, then try next, then return NotFound
         /// </summary>
         FindResult Find(ByteBuffer key);
+        FindResult Find(Span<byte> key);
 
         /// <summary>
         /// All in one function for creating and updating key value pair. If Key does not exists it is created and value is always replaced. It automaticaly preppend current prefix to key.

@@ -656,7 +656,7 @@ namespace BTDB.ODBLayer
         {
             var bytes = new byte[PackUnpack.LengthVUInt((uint)id)];
             int o = 0;
-            PackUnpack.PackVUInt(bytes, ref o, (uint)id);
+            PackUnpack.PackVUInt((Span<byte>) bytes, ref o, (uint)id);
             WriteShortPrefixIl(ilGenerator, pushWriter, bytes);
         }
 

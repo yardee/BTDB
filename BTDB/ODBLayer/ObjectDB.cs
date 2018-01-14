@@ -212,17 +212,19 @@ namespace BTDB.ODBLayer
                 }
             }
 
-            public long GetSingletonOid(uint id)
+            public unsafe long GetSingletonOid(uint id)
             {
                 using (var tr = _keyValueDB.StartTransaction())
                 {
                     tr.SetKeyPrefix(TableSingletonsPrefix);
-                    var key = new byte[PackUnpack.LengthVUInt(id)];
+                    var length = PackUnpack.LengthVUInt(id);
+                    var buff = stackalloc byte[length];
+                    var key = new Span<byte>(buff, length);
                     var ofs = 0;
                     PackUnpack.PackVUInt(key, ref ofs, id);
                     if (tr.FindExactKey(key))
                     {
-                        return (long)new KeyValueDBValueReader(tr).ReadVUInt64();
+                        return (long) new KeyValueDBValueReader(tr).ReadVUInt64();
                     }
                     return 0;
                 }

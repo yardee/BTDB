@@ -309,6 +309,11 @@ namespace BTDBTest
                 return _keyValueDBTransaction.Find(key);
             }
 
+            public FindResult Find(Span<byte> key)
+            {
+                return _keyValueDBTransaction.Find(key);
+            }
+
             public bool CreateOrUpdateKeyValue(ByteBuffer key, ByteBuffer value)
             {
                 return _keyValueDBTransaction.CreateOrUpdateKeyValue(key, value);

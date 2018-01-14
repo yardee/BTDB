@@ -215,7 +215,7 @@ namespace BTDB.StreamLayer
                 var toEncodeLen = PackUnpack.LengthVUInt(toEncode);
                 if (pos + toEncodeLen <= end)
                 {
-                    PackUnpack.PackVUInt(buf, ref pos, toEncode);
+                    PackUnpack.PackVUInt((Span<byte>) buf, ref pos, toEncode);
                 }
                 else
                 {

@@ -160,7 +160,7 @@ namespace BTDB.ODBLayer
             var o = ObjectDB.AllRelationsPKPrefix.Length;
             var prefix = new byte[o + PackUnpack.LengthVUInt(relationIndex)];
             Array.Copy(ObjectDB.AllRelationsPKPrefix, prefix, o);
-            PackUnpack.PackVUInt(prefix, ref o, relationIndex);
+            PackUnpack.PackVUInt((Span<byte>) prefix, ref o, relationIndex);
 
             var protector = _tr.TransactionProtector;
             long prevProtectionCounter = 0;
@@ -543,7 +543,7 @@ namespace BTDB.ODBLayer
         ByteBuffer Vuint2ByteBuffer(uint v)
         {
             var ofs = 0;
-            PackUnpack.PackVUInt(_tempBytes, ref ofs, v);
+            PackUnpack.PackVUInt((Span<byte>) _tempBytes, ref ofs, v);
             return ByteBuffer.NewSync(_tempBytes, 0, ofs);
         }
 
@@ -557,8 +557,8 @@ namespace BTDB.ODBLayer
         ByteBuffer TwiceVuint2ByteBuffer(uint v1, uint v2)
         {
             var ofs = 0;
-            PackUnpack.PackVUInt(_tempBytes, ref ofs, v1);
-            PackUnpack.PackVUInt(_tempBytes, ref ofs, v2);
+            PackUnpack.PackVUInt((Span<byte>) _tempBytes, ref ofs, v1);
+            PackUnpack.PackVUInt((Span<byte>) _tempBytes, ref ofs, v2);
             return ByteBuffer.NewSync(_tempBytes, 0, ofs);
         }
 

@@ -109,6 +109,40 @@ namespace BTDB.KVDBLayer.BTree
             return left * 2;
         }
 
+        int Find(byte[] prefix, Span<byte> key)
+        {
+            var left = 0;
+            var right = _keyvalues.Length;
+            var keyBytes = _keyBytes;
+            while (left < right)
+            {
+                var middle = (left + right) / 2;
+                int currentKeyOfs = _keyvalues[middle].KeyOffset;
+                int currentKeyLen = _keyvalues[middle].KeyLength;
+                var result = BitArrayManipulation.CompareByteArray(prefix, 0, prefix.Length,
+                    keyBytes, currentKeyOfs, Math.Min(currentKeyLen, prefix.Length));
+                if (result == 0)
+                {
+                    result = SpanManipulation.CompareByteArray(key,
+                        keyBytes, currentKeyOfs + prefix.Length, currentKeyLen - prefix.Length);
+                    if (result == 0)
+                    {
+                        return middle * 2 + 1;
+                    }
+                }
+                if (result < 0)
+                {
+                    right = middle;
+                }
+                else
+                {
+                    left = middle + 1;
+                }
+
+            }
+            return left * 2;
+        }
+
         public void CreateOrUpdate(CreateOrUpdateCtx ctx)
         {
             var index = Find(ctx.KeyPrefix, ctx.Key);
@@ -253,6 +287,25 @@ namespace BTDB.KVDBLayer.BTree
         }
 
         public FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, ByteBuffer key)
+        {
+            var idx = Find(prefix, key);
+            FindResult result;
+            if ((idx & 1) == 1)
+            {
+                result = FindResult.Exact;
+                idx = idx / 2;
+            }
+            else
+            {
+                result = FindResult.Previous;
+                idx = idx / 2 - 1;
+            }
+            stack.Add(new NodeIdxPair { Node = this, Idx = idx });
+            keyIndex = idx;
+            return result;
+        }
+
+        public FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, Span<byte> key)
         {
             var idx = Find(prefix, key);
             FindResult result;

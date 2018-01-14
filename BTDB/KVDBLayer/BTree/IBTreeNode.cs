@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BTDB.Buffer;
 
@@ -11,6 +12,7 @@ namespace BTDB.KVDBLayer.BTree
     {
         void CreateOrUpdate(CreateOrUpdateCtx ctx);
         FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, ByteBuffer key);
+        FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, Span<byte> key);
         long CalcKeyCount();
         byte[] GetLeftMostKey();
         void FillStackByIndex(List<NodeIdxPair> stack, long keyIndex);

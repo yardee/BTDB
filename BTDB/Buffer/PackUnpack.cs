@@ -1,4 +1,6 @@
-﻿namespace BTDB.Buffer
+﻿using System;
+
+namespace BTDB.Buffer
 {
     public static class PackUnpack
     {
@@ -192,7 +194,7 @@
             return first == 0xFE ? 8 : 9;
         }
 
-        public static void PackVUInt(byte[] data, ref int ofs, uint value)
+        public static void PackVUInt(Span<byte> data, ref int ofs, uint value)
         {
             if (value < 0x80)
             {

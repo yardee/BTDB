@@ -108,7 +108,7 @@ namespace BTDB.Service
                 var vuLen = PackUnpack.LengthVUInt((uint)data.Length);
                 var vuBuf = new byte[vuLen];
                 int o = 0;
-                PackUnpack.PackVUInt(vuBuf, ref o, (uint)data.Length);
+                PackUnpack.PackVUInt((Span<byte>) vuBuf, ref o, (uint)data.Length);
                 SocketError socketError;
                 lock (_sendlock)
                 {

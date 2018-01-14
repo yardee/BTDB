@@ -47,6 +47,44 @@ namespace BTDB.KVDBLayer.BTreeMem
             }
         }
 
+        public FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, Span<byte> key)
+        {
+            stack.Clear();
+            if (_rootNode == null)
+            {
+                keyIndex = -1;
+                return FindResult.NotFound;
+            }
+            var result = _rootNode.FindKey(stack, out keyIndex, prefix, key);
+            if (result == FindResult.Previous)
+            {
+                if (keyIndex < 0)
+                {
+                    keyIndex = 0;
+                    stack[stack.Count - 1] = new NodeIdxPair { Node = stack[stack.Count - 1].Node, Idx = 0 };
+                    result = FindResult.Next;
+                }
+                else
+                {
+                    if (!KeyStartsWithPrefix(prefix, GetKeyFromStack(stack)))
+                    {
+                        result = FindResult.Next;
+                        keyIndex++;
+                        if (!FindNextKey(stack))
+                        {
+                            return FindResult.NotFound;
+                        }
+                    }
+                }
+                if (!KeyStartsWithPrefix(prefix, GetKeyFromStack(stack)))
+                {
+                    return FindResult.NotFound;
+                }
+            }
+            return result;
+        }
+
+        //obsolete span
         public FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, ByteBuffer key)
         {
             stack.Clear();
@@ -83,6 +121,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             }
             return result;
         }
+
 
         internal static bool KeyStartsWithPrefix(byte[] prefix, ByteBuffer key)
         {

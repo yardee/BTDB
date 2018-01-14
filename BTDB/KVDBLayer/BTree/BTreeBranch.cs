@@ -79,6 +79,33 @@ namespace BTDB.KVDBLayer.BTree
             return left;
         }
 
+        int Find(byte[] prefix, Span<byte> key)
+        {
+            var left = 0;
+            var right = _keys.Length;
+            while (left < right)
+            {
+                var middle = (left + right) / 2;
+                var currentKey = _keys[middle];
+                var result = BitArrayManipulation.CompareByteArray(prefix, prefix.Length,
+                    currentKey, Math.Min(currentKey.Length, prefix.Length));
+                if (result == 0)
+                {
+                    result = SpanManipulation.CompareByteArray(key,
+                        currentKey, prefix.Length, currentKey.Length - prefix.Length);
+                }
+                if (result < 0)
+                {
+                    right = middle;
+                }
+                else
+                {
+                    left = middle + 1;
+                }
+            }
+            return left;
+        }
+
         public void CreateOrUpdate(CreateOrUpdateCtx ctx)
         {
             var index = Find(ctx.KeyPrefix, ctx.Key);
@@ -196,6 +223,15 @@ namespace BTDB.KVDBLayer.BTree
         }
 
         public FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, ByteBuffer key)
+        {
+            var idx = Find(prefix, key);
+            stack.Add(new NodeIdxPair { Node = this, Idx = idx });
+            var result = _children[idx].FindKey(stack, out keyIndex, prefix, key);
+            if (idx > 0) keyIndex += _pairCounts[idx - 1];
+            return result;
+        }
+
+        public FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, Span<byte> key)
         {
             var idx = Find(prefix, key);
             stack.Add(new NodeIdxPair { Node = this, Idx = idx });
