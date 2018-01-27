@@ -21,10 +21,10 @@ namespace BTDB.ODBLayer
         uint _pos;
         bool _seekNeeded;
 
-        protected ByteBuffer KeyBytes;
+        protected Span<byte> KeyBytes;
         int _prevModificationCounter;
 
-        public RelationEnumerator(IInternalObjectDBTransaction tr, RelationInfo relationInfo, ByteBuffer keyBytes, 
+        public RelationEnumerator(IInternalObjectDBTransaction tr, RelationInfo relationInfo, Span<byte> keyBytes, 
                                   IRelationModificationCounter modificationCounter)
         {
             RelationInfo = relationInfo;
@@ -71,8 +71,8 @@ namespace BTDB.ODBLayer
             get
             {
                 SeekCurrent();
-                var keyBytes = _keyValueTr.GetKey();
-                var valueBytes = _keyValueTr.GetValue();
+                var keyBytes = _keyValueTr.GetKeyAsSpan();
+                var valueBytes = _keyValueTr.GetValueAsSpan();
                 return CreateInstance(keyBytes, valueBytes);
             }
         }
@@ -96,7 +96,7 @@ namespace BTDB.ODBLayer
             _prevProtectionCounter = _keyValueTrProtector.ProtectionCounter;
         }
 
-        protected virtual T CreateInstance(ByteBuffer keyBytes, ByteBuffer valueBytes)
+        protected virtual T CreateInstance(Span<byte> keyBytes, Span<byte> valueBytes)
         {
             return (T)RelationInfo.CreateInstance(Transaction, keyBytes, valueBytes, false);
         }
@@ -117,17 +117,17 @@ namespace BTDB.ODBLayer
     {
         readonly int _skipBytes;
 
-        public RelationPrimaryKeyEnumerator(IInternalObjectDBTransaction tr, RelationInfo relationInfo, ByteBuffer keyBytes,
+        public RelationPrimaryKeyEnumerator(IInternalObjectDBTransaction tr, RelationInfo relationInfo, Span<byte> keyBytes,
                                             IRelationModificationCounter modificationCounter)
             : base(tr, relationInfo, keyBytes, modificationCounter)
         {
             _skipBytes = relationInfo.Prefix.Length;
         }
 
-        protected override T CreateInstance(ByteBuffer keyBytes, ByteBuffer valueBytes)
+        protected override T CreateInstance(Span<Byte> keyBytes, Span<byte> valueBytes)
         {
-            var keyWriter = new ByteBufferWriter();
-            keyWriter.WriteBlock(KeyBytes.Buffer, KeyBytes.Offset + _skipBytes, KeyBytes.Length - _skipBytes);
+            var keyWriter = new SpanWriter();
+            keyWriter.WriteBlock(KeyBytes.Slice(_skipBytes));
             keyWriter.WriteBlock(keyBytes);
 
             return (T)RelationInfo.CreateInstance(Transaction, keyWriter.Data, valueBytes, false);
@@ -136,7 +136,7 @@ namespace BTDB.ODBLayer
         public override ByteBuffer GetKeyBytes()
         {
             var keyWriter = new ByteBufferWriter();
-            keyWriter.WriteBlock(KeyBytes.Buffer, KeyBytes.Offset + ObjectDB.AllRelationsPKPrefix.Length, KeyBytes.Length - ObjectDB.AllRelationsPKPrefix.Length);
+            keyWriter.WriteBlock(KeyBytes.Slice(ObjectDB.AllRelationsPKPrefix.Length));
             keyWriter.WriteBlock(base.GetKeyBytes());
             return keyWriter.Data;
         }
@@ -148,7 +148,7 @@ namespace BTDB.ODBLayer
         readonly uint _fieldCountInKey;
         readonly RelationDBManipulator<T> _manipulator;
 
-        public RelationSecondaryKeyEnumerator(IInternalObjectDBTransaction tr, RelationInfo relationInfo, ByteBuffer keyBytes,
+        public RelationSecondaryKeyEnumerator(IInternalObjectDBTransaction tr, RelationInfo relationInfo, Span<Byte> keyBytes,
             uint secondaryKeyIndex, uint fieldCountInKey, RelationDBManipulator<T> manipulator)
             : base(tr, relationInfo, keyBytes, manipulator.ModificationCounter)
         {
@@ -157,7 +157,7 @@ namespace BTDB.ODBLayer
             _manipulator = manipulator;
         }
 
-        protected override T CreateInstance(ByteBuffer keyBytes, ByteBuffer valueBytes)
+        protected override T CreateInstance(Span<byte> keyBytes, Span<byte> valueBytes)
         {
             return _manipulator.CreateInstanceFromSK(_secondaryKeyIndex, _fieldCountInKey, KeyBytes, keyBytes);
         }
@@ -176,13 +176,13 @@ namespace BTDB.ODBLayer
         uint _pos;
         bool _seekNeeded;
         readonly bool _ascending;
-        protected readonly ByteBuffer _keyBytes;
+        protected readonly Span<byte> _keyBytes;
         readonly int _lengthOfNonDataPrefix;
         readonly int _prevModificationCounter;
 
         public RelationAdvancedEnumerator(
             RelationDBManipulator<T> manipulator,
-            ByteBuffer prefixBytes, uint prefixFieldCount,
+            Span<byte> prefixBytes, uint prefixFieldCount,
             EnumerationOrder order,
             KeyProposition startKeyProposition, ByteBuffer startKeyBytes,
             KeyProposition endKeyProposition, ByteBuffer endKeyBytes)
@@ -319,7 +319,7 @@ namespace BTDB.ODBLayer
                     Seek();
                 }
                 _prevProtectionCounter = _keyValueTrProtector.ProtectionCounter;
-                var keyBytes = _keyValueTr.GetKey();
+                var keyBytes = _keyValueTr.GetKeyAsSpan();
                 return CreateInstance(keyBytes);
             }
 
@@ -329,13 +329,13 @@ namespace BTDB.ODBLayer
             }
         }
 
-        protected virtual T CreateInstance(ByteBuffer keyBytes)
+        protected virtual T CreateInstance(Span<byte> keyBytes)
         {
-            var writer = new ByteBufferWriter();
-            writer.WriteBlock(_keyBytes.Buffer, _keyBytes.Offset + _lengthOfNonDataPrefix, _keyBytes.Length - _lengthOfNonDataPrefix);
+            var writer = new SpanWriter();
+            writer.WriteBlock(_keyBytes.Slice(_lengthOfNonDataPrefix));
             writer.WriteBlock(keyBytes);
 
-            return (T)_manipulator.RelationInfo.CreateInstance(_tr, writer.Data, _keyValueTr.GetValue(), false);
+            return (T)_manipulator.RelationInfo.CreateInstance(_tr, writer.Data, _keyValueTr.GetValueAsSpan(), false);
         }
 
         void Seek()
@@ -360,7 +360,7 @@ namespace BTDB.ODBLayer
 
         public RelationAdvancedSecondaryKeyEnumerator(
             RelationDBManipulator<T> manipulator,
-            ByteBuffer prefixBytes, uint prefixFieldCount,
+            Span<byte> prefixBytes, uint prefixFieldCount,
             EnumerationOrder order,
             KeyProposition startKeyProposition, ByteBuffer startKeyBytes,
             KeyProposition endKeyProposition, ByteBuffer endKeyBytes,
@@ -372,7 +372,7 @@ namespace BTDB.ODBLayer
             _secondaryKeyIndex = secondaryKeyIndex;
         }
 
-        protected override T CreateInstance(ByteBuffer keyBytes)
+        protected override T CreateInstance(Span<byte> keyBytes)
         {
             return _manipulator.CreateInstanceFromSK(_secondaryKeyIndex, _prefixFieldCount, _keyBytes, keyBytes);
         }
@@ -391,12 +391,12 @@ namespace BTDB.ODBLayer
         uint _pos;
         SeekState _seekState;
         readonly bool _ascending;
-        protected readonly ByteBuffer _keyBytes;
+        protected readonly Span<byte> _keyBytes;
         protected Func<AbstractBufferedReader, IReaderCtx, TKey> _keyReader;
         readonly int _lengthOfNonDataPrefix;
 
         public RelationAdvancedOrderedEnumerator(RelationDBManipulator<TValue> manipulator,
-            ByteBuffer prefixBytes, uint prefixFieldCount,
+            Span<byte> prefixBytes, uint prefixFieldCount,
             EnumerationOrder order,
             KeyProposition startKeyProposition, ByteBuffer startKeyBytes,
             KeyProposition endKeyProposition, ByteBuffer endKeyBytes, bool initKeyReader = true)
@@ -493,13 +493,13 @@ namespace BTDB.ODBLayer
 
         public uint Count => _count;
 
-        protected virtual TValue CreateInstance(ByteBuffer prefixKeyBytes, ByteBuffer keyBytes)
+        protected virtual TValue CreateInstance(Span<byte> prefixKeyBytes, Span<byte> keyBytes)
         {
-            var writer = new ByteBufferWriter();
-            writer.WriteBlock(_keyBytes.Buffer, _keyBytes.Offset + _lengthOfNonDataPrefix, _keyBytes.Length - _lengthOfNonDataPrefix);
+            var writer = new SpanWriter();
+            writer.WriteBlock(_keyBytes.Slice(_lengthOfNonDataPrefix));
             writer.WriteBlock(keyBytes);
 
-            return (TValue)_manipulator.RelationInfo.CreateInstance(_tr, writer.Data, _keyValueTr.GetValue(), false);
+            return (TValue)_manipulator.RelationInfo.CreateInstance(_tr, writer.Data, _keyValueTr.GetValueAsSpan(), false);
         }
 
         public TValue CurrentValue
@@ -519,7 +519,7 @@ namespace BTDB.ODBLayer
                     Seek();
                 }
                 _prevProtectionCounter = _keyValueTrProtector.ProtectionCounter;
-                var keyBytes = _keyValueTr.GetKey();
+                var keyBytes = _keyValueTr.GetKeyAsSpan();
                 return CreateInstance(_keyBytes, keyBytes);
             }
             set
@@ -592,7 +592,7 @@ namespace BTDB.ODBLayer
         readonly uint _secondaryKeyIndex;
 
         public RelationAdvancedOrderedSecondaryKeyEnumerator(RelationDBManipulator<TValue> manipulator,
-            ByteBuffer prefixBytes, uint prefixFieldCount, EnumerationOrder order,
+            Span<byte> prefixBytes, uint prefixFieldCount, EnumerationOrder order,
             KeyProposition startKeyProposition, ByteBuffer startKeyBytes,
             KeyProposition endKeyProposition, ByteBuffer endKeyBytes,
             uint secondaryKeyIndex)
@@ -609,7 +609,7 @@ namespace BTDB.ODBLayer
                 .GetSimpleLoader(new RelationInfo.SimpleLoaderType(advancedEnumParamField.Handler, typeof(TKey)));
         }
 
-        protected override TValue CreateInstance(ByteBuffer prefixKeyBytes, ByteBuffer keyBytes)
+        protected override TValue CreateInstance(Span<byte> prefixKeyBytes, Span<byte> keyBytes)
         {
             return _manipulator.CreateInstanceFromSK(_secondaryKeyIndex, _prefixFieldCount, _keyBytes, keyBytes);
         }

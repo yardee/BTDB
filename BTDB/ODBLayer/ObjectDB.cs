@@ -83,7 +83,7 @@ namespace BTDB.ODBLayer
                 _relationsInfo.LoadRelations(LoadRelationNamesEnum(tr));
                 if (_lastDictId == 0)
                 {
-                    tr.SetKeyPrefix(null);
+                    tr.SetKeyPrefix(Span<byte>.Empty);
                     if (tr.FindExactKey(LastDictIdKey))
                     {
                         _lastDictId = new ByteArrayReader(tr.GetValueAsByteArray()).ReadVUInt64();

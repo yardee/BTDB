@@ -421,7 +421,7 @@ namespace BTDB.KVDBLayer
                                 var valueLen = reader.ReadVInt32();
                                 var key = new byte[keyLen];
                                 reader.ReadBlock(key);
-                                var keyBuf = ByteBuffer.NewAsync(key);
+                                var keyBuf = new Span<byte>(key);
                                 if ((command & KVCommandType.FirstParamCompressed) != 0)
                                 {
                                     _compression.DecompressKey(ref keyBuf);
@@ -444,7 +444,7 @@ namespace BTDB.KVDBLayer
                                 {
                                     reader.SkipBlock(valueLen);
                                 }
-                                _nextRoot.CreateOrUpdate(ctx);
+                                _nextRoot.CreateOrUpdate(ref ctx);
                             }
                             break;
                         case KVCommandType.EraseOne:
@@ -543,6 +543,47 @@ namespace BTDB.KVDBLayer
             {
                 _nextRoot = null;
                 return false;
+            }
+        }
+
+        void StoreValueInlineInMemory(Span<byte> value, out uint valueOfs, out int valueSize)
+        {
+            switch (value.Length)
+            {
+                case 0:
+                    valueOfs = 0;
+                    valueSize = 0;
+                    break;
+                case 1:
+                    valueOfs = 0;
+                    valueSize = 0x1000000 | (value[0] << 16);
+                    break;
+                case 2:
+                    valueOfs = 0;
+                    valueSize = 0x2000000 | (value[0] << 16) | (value[1] << 8);
+                    break;
+                case 3:
+                    valueOfs = 0;
+                    valueSize = 0x3000000 | (value[0] << 16) | (value[1] << 8) | value[2];
+                    break;
+                case 4:
+                    valueOfs = value[3];
+                    valueSize = 0x4000000 | (value[0] << 16) | (value[1] << 8) | value[2];
+                    break;
+                case 5:
+                    valueOfs = value[3] | ((uint)value[4] << 8);
+                    valueSize = 0x5000000 | (value[0] << 16) | (value[1] << 8) | value[2];
+                    break;
+                case 6:
+                    valueOfs = value[3] | ((uint)value[4] << 8) | ((uint)value[5] << 16);
+                    valueSize = 0x6000000 | (value[0] << 16) | (value[0 + 1] << 8) | value[0 + 2];
+                    break;
+                case 7:
+                    valueOfs = value[3] | ((uint)value[4] << 8) | ((uint)value[5] << 16) | (((uint)value[6]) << 24);
+                    valueSize = 0x7000000 | (value[0] << 16) | (value[1] << 8) | value[2];
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -890,6 +931,60 @@ namespace BTDB.KVDBLayer
                     Array.Copy(key.Buffer, key.Offset, fullkey, prefix.Length, key.Length);
                     prefix = BitArrayManipulation.EmptyByteArray;
                     key = ByteBuffer.NewAsync(fullkey);
+                }
+                if (_compression.CompressKey(ref key))
+                {
+                    command |= KVCommandType.FirstParamCompressed;
+                }
+            }
+            valueSize = value.Length;
+            if (_compression.CompressValue(ref value))
+            {
+                command |= KVCommandType.SecondParamCompressed;
+                valueSize = -value.Length;
+            }
+            var trlPos = _writerWithTransactionLog.GetCurrentPosition();
+            if (trlPos > 256 && trlPos + prefix.Length + key.Length + 16 + value.Length > MaxTrLogFileSize)
+            {
+                WriteStartOfNewTransactionLogFile();
+            }
+            _writerWithTransactionLog.WriteUInt8((byte)command);
+            _writerWithTransactionLog.WriteVInt32(prefix.Length + key.Length);
+            _writerWithTransactionLog.WriteVInt32(value.Length);
+            _writerWithTransactionLog.WriteBlock(prefix);
+            _writerWithTransactionLog.WriteBlock(key);
+            if (valueSize != 0)
+            {
+                if (valueSize > 0 && valueSize < MaxValueSizeInlineInMemory)
+                {
+                    StoreValueInlineInMemory(value, out valueOfs, out valueSize);
+                    valueFileId = 0;
+                }
+                else
+                {
+                    valueFileId = _fileIdWithTransactionLog;
+                    valueOfs = (uint)_writerWithTransactionLog.GetCurrentPosition();
+                }
+                _writerWithTransactionLog.WriteBlock(value);
+            }
+            else
+            {
+                valueFileId = 0;
+                valueOfs = 0;
+            }
+        }
+
+        public void WriteCreateOrUpdateCommand(byte[] prefix, Span<byte> key, Span<byte> value, out uint valueFileId, out uint valueOfs, out int valueSize)
+        {
+            var command = KVCommandType.CreateOrUpdate;
+            if (_compression.ShouldTryToCompressKey(prefix.Length + key.Length))
+            {
+                if (prefix.Length != 0)
+                {
+                    var fullkey = new byte[prefix.Length + key.Length];
+                    key = new Span<byte>(fullkey);
+                    Array.Copy(prefix, 0, fullkey, 0, prefix.Length);
+                    key.CopyTo(key.Slice(prefix.Length));
                 }
                 if (_compression.CompressKey(ref key))
                 {

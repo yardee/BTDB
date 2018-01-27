@@ -284,6 +284,11 @@ namespace BTDBTest
                 _keyValueDBTransaction.SetKeyPrefix(prefix);
             }
 
+            public void SetKeyPrefix(Span<byte> prefix)
+            {
+                _keyValueDBTransaction.SetKeyPrefix(prefix);
+            }
+
             public bool FindFirstKey()
             {
                 return _keyValueDBTransaction.FindFirstKey();
@@ -315,6 +320,11 @@ namespace BTDBTest
             }
 
             public bool CreateOrUpdateKeyValue(ByteBuffer key, ByteBuffer value)
+            {
+                return _keyValueDBTransaction.CreateOrUpdateKeyValue(key, value);
+            }
+
+            public bool CreateOrUpdateKeyValue(Span<byte> key, Span<byte> value)
             {
                 return _keyValueDBTransaction.CreateOrUpdateKeyValue(key, value);
             }
@@ -352,6 +362,16 @@ namespace BTDBTest
             public ByteBuffer GetValue()
             {
                 return _keyValueDBTransaction.GetValue();
+            }
+
+            public Span<byte> GetKeyAsSpan()
+            {
+                return _keyValueDBTransaction.GetKeyAsSpan();
+            }
+
+            public Span<byte> GetValueAsSpan()
+            {
+                return _keyValueDBTransaction.GetValueAsSpan();
             }
 
             public void SetValue(ByteBuffer value)

@@ -15,6 +15,7 @@ namespace BTDB.KVDBLayer
         /// It sets automatic key prefix, all funtions then works relatively to this prefix, it also invalidates current key
         /// </summary>
         void SetKeyPrefix(ByteBuffer prefix);
+        void SetKeyPrefix(Span<byte> prefix);
 
         /// <summary>
         /// Move actual key pointer to first key in current prefix.
@@ -51,6 +52,7 @@ namespace BTDB.KVDBLayer
         /// </summary>
         /// <returns>true for Create, false for Update</returns>
         bool CreateOrUpdateKeyValue(ByteBuffer key, ByteBuffer value);
+        bool CreateOrUpdateKeyValue(Span<byte> key, Span<byte> value);
 
         /// <summary>
         /// In current prefix will calculate number of key value pairs
@@ -84,11 +86,14 @@ namespace BTDB.KVDBLayer
         /// Return current key.
         /// </summary>
         ByteBuffer GetKey();
+        Span<byte> GetKeyAsSpan();
 
         /// <summary>
         /// Return current value.
         /// </summary>
         ByteBuffer GetValue();
+
+        Span<byte> GetValueAsSpan();
 
         /// <summary>
         /// Overwrite current value with new content.

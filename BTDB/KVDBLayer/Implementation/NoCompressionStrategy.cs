@@ -1,3 +1,4 @@
+using System;
 using BTDB.Buffer;
 
 namespace BTDB.KVDBLayer
@@ -14,12 +15,27 @@ namespace BTDB.KVDBLayer
             return false;
         }
 
+        public bool CompressKey(ref Span<byte> data)
+        {
+            return false;
+        }
+
         public bool CompressValue(ref ByteBuffer data)
         {
             return false;
         }
 
+        public bool CompressValue(ref Span<byte> data)
+        {
+            return false;
+        }
+
         public void DecompressKey(ref ByteBuffer data)
+        {
+            throw new BTDBException("Compression not supported");
+        }
+
+        public void DecompressKey(ref Span<byte> data)
         {
             throw new BTDBException("Compression not supported");
         }

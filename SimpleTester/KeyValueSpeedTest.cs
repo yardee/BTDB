@@ -291,7 +291,7 @@ namespace SimpleTester
                         for (int i = 0; i < keys; i++)
                         {
                             int o = 0;
-                            PackUnpack.PackVUInt(key, ref o, (uint)i);
+                            PackUnpack.PackVUInt((Span<byte>) key, ref o, (uint)i);
                             tr.CreateOrUpdateKeyValue(ByteBuffer.NewSync(key, 0, o), ByteBuffer.NewSync(value));
                         }
                         tr.Commit();
@@ -315,7 +315,7 @@ namespace SimpleTester
                         for (int i = 0; i < keys; i++)
                         {
                             int o = 0;
-                            PackUnpack.PackVUInt(key, ref o, (uint)i);
+                            PackUnpack.PackVUInt((Span<byte>) key, ref o, (uint)i);
                             tr.Find(ByteBuffer.NewSync(key, 0, o));
                         }
                         tr.Commit();

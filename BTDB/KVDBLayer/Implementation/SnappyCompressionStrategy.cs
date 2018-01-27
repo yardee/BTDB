@@ -1,3 +1,4 @@
+using System;
 using BTDB.Buffer;
 using BTDB.SnappyCompression;
 
@@ -15,13 +16,29 @@ namespace BTDB.KVDBLayer
             return SnappyCompress.TryCompress(ref data, 80);
         }
 
+        public bool CompressKey(ref Span<byte> data)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool CompressValue(ref ByteBuffer data)
         {
             if (data.Length < 32) return false;
             return SnappyCompress.TryCompress(ref data, 80);
         }
 
+        public bool CompressValue(ref Span<byte> data)
+        {
+            if (data.Length < 32) return false;
+            return SnappyCompress.TryCompress(ref data, 80);
+        }
+
         public void DecompressKey(ref ByteBuffer data)
+        {
+            data = SnappyDecompress.Decompress(data);
+        }
+
+        public void DecompressKey(ref Span<byte> data)
         {
             data = SnappyDecompress.Decompress(data);
         }

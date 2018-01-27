@@ -16,7 +16,7 @@ namespace BTDB.KVDBLayer.BTree
             _transactionId = transactionId;
         }
 
-        public void CreateOrUpdate(CreateOrUpdateCtx ctx)
+        public void CreateOrUpdate(ref CreateOrUpdateCtx ctx)
         {
             ctx.TransactionId = _transactionId;
             if (ctx.Stack == null) ctx.Stack = new List<NodeIdxPair>();
@@ -24,8 +24,8 @@ namespace BTDB.KVDBLayer.BTree
             if (_rootNode == null)
             {
                 _rootNode = ctx.WholeKeyLen > BTreeLeafComp.MaxTotalLen
-                    ? BTreeLeaf.CreateFirst(ctx)
-                    : BTreeLeafComp.CreateFirst(ctx);
+                    ? BTreeLeaf.CreateFirst(ref ctx)
+                    : BTreeLeafComp.CreateFirst(ref ctx);
                 _keyValueCount = 1;
                 ctx.Stack.Add(new NodeIdxPair {Node = _rootNode, Idx = 0});
                 ctx.KeyIndex = 0;
@@ -33,7 +33,7 @@ namespace BTDB.KVDBLayer.BTree
                 return;
             }
             ctx.Depth = 0;
-            _rootNode.CreateOrUpdate(ctx);
+            _rootNode.CreateOrUpdate(ref ctx);
             if (ctx.Split)
             {
                 _rootNode = new BTreeBranch(ctx.TransactionId, ctx.Node1, ctx.Node2);

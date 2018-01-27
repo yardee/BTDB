@@ -41,6 +41,7 @@
     <NoWarn>1720</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -415,6 +416,8 @@
     <Compile Include="KVDBLayer\Helpers\PtrLenList.cs" />
     <Compile Include="ODBLayer\ReferenceEqualityComparer.cs" />
     <Compile Include="StreamLayer\PositionLessStreamProxy.cs" />
+    <Compile Include="StreamLayer\SpanReader.cs" />
+    <Compile Include="StreamLayer\SpanWriter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

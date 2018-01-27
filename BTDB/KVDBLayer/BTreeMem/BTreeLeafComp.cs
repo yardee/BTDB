@@ -55,7 +55,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             _keyvalues = newKeyValues;
         }
 
-        internal static IBTreeNode CreateFirst(CreateOrUpdateCtx ctx)
+        internal static IBTreeNode CreateFirst(ref CreateOrUpdateCtx ctx)
         {
             Debug.Assert(ctx.WholeKeyLen <= MaxTotalLen);
             var result = new BTreeLeafComp(ctx.TransactionId, 1);
@@ -64,7 +64,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                 {
                     KeyOffset = 0,
                     KeyLength = (ushort)result._keyBytes.Length,
-                    Value = ctx.Value.ToByteArray()
+                    Value = ctx.Value.ToArray()
                 };
             return result;
         }
@@ -137,7 +137,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             return left * 2;
         }
 
-        public void CreateOrUpdate(CreateOrUpdateCtx ctx)
+        public void CreateOrUpdate(ref CreateOrUpdateCtx ctx)
         {
             var index = Find(ctx.KeyPrefix, ctx.Key);
             if ((index & 1) == 1)
@@ -146,7 +146,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                 ctx.Created = false;
                 ctx.KeyIndex = index;
                 var m = _keyvalues[index];
-                m.Value = ctx.Value.ToByteArray();
+                m.Value = ctx.Value.ToArray();
                 var leaf = this;
                 if (ctx.TransactionId != TransactionId)
                 {
@@ -172,7 +172,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                             Value = member.Value
                         };
                 }
-                new BTreeLeaf(ctx.TransactionId - 1, currentKeyValues).CreateOrUpdate(ctx);
+                new BTreeLeaf(ctx.TransactionId - 1, currentKeyValues).CreateOrUpdate(ref ctx);
                 return;
             }
             index = index / 2;
@@ -189,7 +189,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                     {
                         KeyOffset = ofs,
                         KeyLength = (ushort)newKey.Length,
-                        Value = ctx.Value.ToByteArray()
+                        Value = ctx.Value.ToArray()
                     };
                 Array.Copy(_keyBytes, 0, newKeyBytes, 0, ofs);
                 Array.Copy(newKey, 0, newKeyBytes, ofs, newKey.Length);
@@ -226,7 +226,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                 {
                     KeyOffset = ofs,
                     KeyLength = (ushort)newKey.Length,
-                    Value = ctx.Value.ToByteArray()
+                    Value = ctx.Value.ToArray()
                 };
                 Array.Copy(_keyvalues, index, leftNode._keyvalues, index + 1, keyCountLeft - index - 1);
                 Array.Copy(_keyvalues, keyCountLeft - 1, rightNode._keyvalues, 0, keyCountRight);
@@ -261,7 +261,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                 {
                     KeyOffset = 0,
                     KeyLength = (ushort)newKey.Length,
-                    Value = ctx.Value.ToByteArray(),
+                    Value = ctx.Value.ToArray(),
                 };
                 Array.Copy(_keyvalues, index, rightNode._keyvalues, index - keyCountLeft + 1, keyCountLeft + keyCountRight - 1 - index);
                 ctx.Stack.Add(new NodeIdxPair { Node = rightNode, Idx = index - keyCountLeft });
@@ -309,12 +309,12 @@ namespace BTDB.KVDBLayer.BTreeMem
             return result;
         }
 
-        static BTreeLeafMember NewMemberFromCtx(CreateOrUpdateCtx ctx)
+        static BTreeLeafMember NewMemberFromCtx(ref CreateOrUpdateCtx ctx)
         {
             return new BTreeLeafMember
                 {
                     Key = ctx.WholeKey(),
-                    Value = ctx.Value.ToByteArray()
+                    Value = ctx.Value.ToArray()
                 };
         }
 

@@ -321,6 +321,21 @@ namespace BTDB.StreamLayer
             WriteBlock(data, 0, data.Length);
         }
 
+        public void WriteBlock(Span<byte> data)
+        {
+            int toWriteLen = data.Length;
+            while (toWriteLen > 0)
+            {
+                if (Pos >= End) FlushBuffer();
+                var l = End - Pos;
+                if (toWriteLen < l) l = toWriteLen;
+                data.Slice(0, l).CopyTo(new Span<byte>(Buf, Pos, l));
+                data = data.Slice(l);
+                toWriteLen -= l;
+                Pos += l;
+            }
+        }
+
         public unsafe void WriteGuid(Guid value)
         {
             var ptr = (IntPtr)(byte*)&value;

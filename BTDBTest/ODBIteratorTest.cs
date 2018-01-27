@@ -557,6 +557,7 @@ namespace BTDBTest
         }
 
         [Fact]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void IterateNullableValues()
         {
             using (var tr = _db.StartTransaction())

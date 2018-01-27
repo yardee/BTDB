@@ -47,6 +47,21 @@ namespace BTDB.KVDBLayer
             InvalidateCurrentKey();
         }
 
+        public void SetKeyPrefix(Span<byte> prefix)
+        {
+            _prefix = prefix.ToArray();
+            if (_prefix.Length == 0)
+            {
+                _prefixKeyStart = 0;
+            }
+            else
+            {
+                _prefixKeyStart = -1;
+            }
+            _prefixKeyCount = -1;
+            InvalidateCurrentKey();
+        }
+
         public bool FindFirstKey()
         {
             return SetKeyIndex(0);
@@ -105,11 +120,27 @@ namespace BTDB.KVDBLayer
             var ctx = new CreateOrUpdateCtx
                 {
                     KeyPrefix = _prefix,
-                    Key = key,
-                    Value = value,
+                    Key = key.ToSpan(),
+                    Value = value.ToSpan(),
                     Stack = _stack
                 };
-            BtreeRoot.CreateOrUpdate(ctx);
+            BtreeRoot.CreateOrUpdate(ref ctx);
+            _keyIndex = ctx.KeyIndex;
+            if (ctx.Created && _prefixKeyCount >= 0) _prefixKeyCount++;
+            return ctx.Created;
+        }
+
+        public bool CreateOrUpdateKeyValue(Span<byte> key, Span<byte> value)
+        {
+            MakeWrittable();
+            var ctx = new CreateOrUpdateCtx
+            {
+                KeyPrefix = _prefix,
+                Key = key,
+                Value = value,
+                Stack = _stack
+            };
+            BtreeRoot.CreateOrUpdate(ref ctx);
             _keyIndex = ctx.KeyIndex;
             if (ctx.Created && _prefixKeyCount >= 0) _prefixKeyCount++;
             return ctx.Created;
@@ -229,6 +260,20 @@ namespace BTDB.KVDBLayer
             if (!IsValidKey()) return ByteBuffer.NewEmpty();
             var nodeIdxPair = _stack[_stack.Count - 1];
             return ((IBTreeLeafNode)nodeIdxPair.Node).GetMemberValue(nodeIdxPair.Idx);
+        }
+
+        public Span<byte> GetKeyAsSpan()
+        {
+            if (!IsValidKey()) return Span<byte>.Empty;
+            var wholeKey = GetCurrentKeyFromStack();
+            return new Span<byte>(wholeKey.Buffer, wholeKey.Offset + _prefix.Length, wholeKey.Length - _prefix.Length);
+        }
+
+        public Span<byte> GetValueAsSpan()
+        {
+            if (!IsValidKey()) return Span<byte>.Empty;
+            var nodeIdxPair = _stack[_stack.Count - 1];
+            return ((IBTreeLeafNode)nodeIdxPair.Node).GetMemberValue(nodeIdxPair.Idx).ToSpan();
         }
 
         void EnsureValidKey()

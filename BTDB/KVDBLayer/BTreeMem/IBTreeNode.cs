@@ -6,7 +6,7 @@ namespace BTDB.KVDBLayer.BTreeMem
 {
     interface IBTreeNode
     {
-        void CreateOrUpdate(CreateOrUpdateCtx ctx);
+        void CreateOrUpdate(ref CreateOrUpdateCtx ctx);
         FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, ByteBuffer key);
         FindResult FindKey(List<NodeIdxPair> stack, out long keyIndex, byte[] prefix, Span<byte> key);
         long CalcKeyCount();

@@ -115,5 +115,10 @@ namespace BTDB.Buffer
             Array.Copy(append.Buffer, append.Offset, newBuffer, Length, append.Length);
             return NewAsync(newBuffer, 0, Length + append.Length);
         }
+
+        public Span<byte> ToSpan()
+        {
+            return new Span<byte>(Buffer, Offset, Length);
+        }
     }
 }

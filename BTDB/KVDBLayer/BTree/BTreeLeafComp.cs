@@ -59,7 +59,7 @@ namespace BTDB.KVDBLayer.BTree
             _keyvalues = newKeyValues;
         }
 
-        internal static IBTreeNode CreateFirst(CreateOrUpdateCtx ctx)
+        internal static IBTreeNode CreateFirst(ref CreateOrUpdateCtx ctx)
         {
             Debug.Assert(ctx.WholeKeyLen <= MaxTotalLen);
             var result = new BTreeLeafComp(ctx.TransactionId, 1);
@@ -143,7 +143,7 @@ namespace BTDB.KVDBLayer.BTree
             return left * 2;
         }
 
-        public void CreateOrUpdate(CreateOrUpdateCtx ctx)
+        public void CreateOrUpdate(ref CreateOrUpdateCtx ctx)
         {
             var index = Find(ctx.KeyPrefix, ctx.Key);
             if ((index & 1) == 1)
@@ -182,7 +182,7 @@ namespace BTDB.KVDBLayer.BTree
                             ValueSize = member.ValueSize
                         };
                 }
-                new BTreeLeaf(ctx.TransactionId - 1, currentKeyValues).CreateOrUpdate(ctx);
+                new BTreeLeaf(ctx.TransactionId - 1, currentKeyValues).CreateOrUpdate(ref ctx);
                 return;
             }
             index = index / 2;
@@ -324,7 +324,7 @@ namespace BTDB.KVDBLayer.BTree
             return result;
         }
 
-        static BTreeLeafMember NewMemberFromCtx(CreateOrUpdateCtx ctx)
+        static BTreeLeafMember NewMemberFromCtx(ref CreateOrUpdateCtx ctx)
         {
             return new BTreeLeafMember
                 {

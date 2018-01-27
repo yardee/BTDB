@@ -18,6 +18,17 @@ namespace BTDBTest
             Assert.Equal(s, d.ToArraySegment());
         }
 
+        [Fact]
+        public void BasicSpan()
+        {
+            var s = new Span<byte>(new byte[] { 1, 2, 3, 1, 2, 3, 1, 2, 3 });
+            var t = new Span<byte>(new byte[10]);
+            var r = SnappyCompress.Compress(t, s);
+            Assert.Equal(7, r);
+            var d = SnappyDecompress.Decompress(t.Slice(0, r));
+            Assert.Equal(s.ToArray(), d.ToArray());
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
@@ -90,6 +101,18 @@ namespace BTDBTest
             Assert.Equal(source, decompressed.ToArraySegment());
             compressed = new byte[compressedLength / 2];
             Assert.Equal(-1, SnappyCompress.Compress(ByteBuffer.NewSync(compressed), ByteBuffer.NewSync(source)));
+
+            CheckSpanVersion(source);
+        }
+
+        static void CheckSpanVersion(byte[] source)
+        {
+            var compressed = new Span<byte>(new byte[(long) source.Length * 6 / 5 + 32]);
+            var compressedLength = SnappyCompress.Compress(compressed, new Span<byte>(source));
+            var decompressed = SnappyDecompress.Decompress(compressed.Slice(0, compressedLength));
+            Assert.Equal(source, decompressed.ToArray());
+            compressed = new Span<byte>(new byte[compressedLength / 2]);
+            Assert.Equal(-1, SnappyCompress.Compress(compressed, new Span<byte>(source)));
         }
     }
 }

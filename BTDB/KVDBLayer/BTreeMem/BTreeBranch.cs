@@ -106,12 +106,12 @@ namespace BTDB.KVDBLayer.BTreeMem
             return left;
         }
 
-        public void CreateOrUpdate(CreateOrUpdateCtx ctx)
+        public void CreateOrUpdate(ref CreateOrUpdateCtx ctx)
         {
             var index = Find(ctx.KeyPrefix, ctx.Key);
             ctx.Stack.Add(new NodeIdxPair { Node = this, Idx = index });
             ctx.Depth++;
-            _children[index].CreateOrUpdate(ctx);
+            _children[index].CreateOrUpdate(ref ctx);
             ctx.Depth--;
             var newBranch = this;
             if (ctx.Split)

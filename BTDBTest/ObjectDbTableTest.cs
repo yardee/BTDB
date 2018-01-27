@@ -1736,7 +1736,7 @@ namespace BTDBTest
                     var personSimpleTable = creator(tr);
                     for (int i = 0; i < 100; i++)
                     {
-                        var duty = new SimpleObject() {Id = (ulong) i, Name = "HardCore Code" + i % 5};
+                        var duty = new SimpleObject {Id = (ulong) i, Name = "HardCore Code" + i % 5};
                         personSimpleTable.Insert(duty);
                     }
 

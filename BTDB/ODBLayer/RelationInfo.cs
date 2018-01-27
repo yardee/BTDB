@@ -258,11 +258,11 @@ namespace BTDB.ODBLayer
 
         void CalculateSecondaryKey(IInternalObjectDBTransaction tr, IList<KeyValuePair<uint, SecondaryKeyInfo>> indexes)
         {
-            var keyWriter = new ByteBufferWriter();
+            var keyWriter = new SpanWriter();
 
             var enumeratorType = typeof(RelationEnumerator<>).MakeGenericType(_clientType);
             keyWriter.WriteByteArrayRaw(Prefix);
-            var enumerator = (IEnumerator)Activator.CreateInstance(enumeratorType, tr, this, keyWriter.GetDataAndRewind().ToAsyncSafe(), new SimpleModificationCounter());
+            var enumerator = (IEnumerator)Activator.CreateInstance(enumeratorType, tr, this, keyWriter.GetDataAndRewind(), new SimpleModificationCounter());
 
             var keySavers = new Action<IInternalObjectDBTransaction, AbstractBufferedWriter, object>[indexes.Count];
 
@@ -286,7 +286,7 @@ namespace BTDB.ODBLayer
                     keySavers[i](tr, keyWriter, obj);
                     var keyBytes = keyWriter.GetDataAndRewind();
 
-                    if (!tr.KeyValueDBTransaction.CreateOrUpdateKeyValue(keyBytes, ByteBuffer.NewEmpty()))
+                    if (!tr.KeyValueDBTransaction.CreateOrUpdateKeyValue(keyBytes, Span<byte>.Empty))
                         throw new BTDBException("Internal error, secondary key bytes must be always unique.");
                 }
             }
@@ -1085,21 +1085,21 @@ namespace BTDB.ODBLayer
             return a != null ? a.Name : p.Name;
         }
 
-        public object CreateInstance(IInternalObjectDBTransaction tr, ByteBuffer keyBytes, ByteBuffer valueBytes,
+        public object CreateInstance(IInternalObjectDBTransaction tr, Span<byte> keyBytes, Span<byte> valueBytes,
                                      bool keyContainsRelationIndex = true)
         {
             var obj = Creator(tr);
-            var keyReader = new ByteBufferReader(keyBytes);
+            var keyReader = new SpanReader(keyBytes);
             if (keyContainsRelationIndex)
                 keyReader.SkipVUInt32(); //index Relation
             GetPrimaryKeysLoader()(tr, keyReader, obj);
-            var valueReader = new ByteBufferReader(valueBytes);
+            var valueReader = new SpanReader(valueBytes);
             var version = valueReader.ReadVUInt32();
             GetValueLoader(version)(tr, valueReader, obj);
             return obj;
         }
 
-        public void FreeContent(IInternalObjectDBTransaction tr, ByteBuffer valueBytes)
+        public void FreeContent(IInternalObjectDBTransaction tr, Span<byte> valueBytes)
         {
             FreeContentOldDict.Clear();
             FreeContentOldOid.Clear();
@@ -1139,9 +1139,9 @@ namespace BTDB.ODBLayer
             tr.KeyValueDBTransaction.EraseAll();
         }
 
-        public void FindUsedObjectsToFree(IInternalObjectDBTransaction tr, ByteBuffer valueBytes, IList<ulong> dictionaries, IList<ulong> oids)
+        public void FindUsedObjectsToFree(IInternalObjectDBTransaction tr, Span<byte> valueBytes, IList<ulong> dictionaries, IList<ulong> oids)
         {
-            var valueReader = new ByteArrayReader(valueBytes.ToByteArray());
+            var valueReader = new SpanReader(valueBytes);
             var version = valueReader.ReadVUInt32();
             GetIDictFinder(version)?.Invoke(tr, valueReader, dictionaries, oids);
         }

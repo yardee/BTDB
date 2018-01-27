@@ -42,7 +42,6 @@ namespace BTDB.StreamLayer
                 return _result;
             }
         }
-
         public override void FlushBuffer()
         {
             var newLen = Math.Max((int)Math.Min((long)End * 2, 2147483591), 128);

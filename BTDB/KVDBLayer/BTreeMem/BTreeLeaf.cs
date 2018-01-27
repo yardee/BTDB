@@ -34,10 +34,10 @@ namespace BTDB.KVDBLayer.BTreeMem
             _keyvalues = newKeyValues;
         }
 
-        internal static IBTreeNode CreateFirst(CreateOrUpdateCtx ctx)
+        internal static IBTreeNode CreateFirst(ref CreateOrUpdateCtx ctx)
         {
             var result = new BTreeLeaf(ctx.TransactionId, 1);
-            result._keyvalues[0] = NewMemberFromCtx(ctx);
+            result._keyvalues[0] = NewMemberFromCtx(ref ctx);
             return result;
         }
 
@@ -105,7 +105,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             return left * 2;
         }
 
-        public void CreateOrUpdate(CreateOrUpdateCtx ctx)
+        public void CreateOrUpdate(ref CreateOrUpdateCtx ctx)
         {
             var index = Find(ctx.KeyPrefix, ctx.Key);
             if ((index & 1) == 1)
@@ -114,7 +114,7 @@ namespace BTDB.KVDBLayer.BTreeMem
                 ctx.Created = false;
                 ctx.KeyIndex = index;
                 var m = _keyvalues[index];
-                m.Value = ctx.Value.ToByteArray();
+                m.Value = ctx.Value.ToArray();
                 var leaf = this;
                 if (ctx.TransactionId != TransactionId)
                 {
@@ -134,7 +134,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             {
                 var newKeyValues = new BTreeLeafMember[_keyvalues.Length + 1];
                 Array.Copy(_keyvalues, 0, newKeyValues, 0, index);
-                newKeyValues[index] = NewMemberFromCtx(ctx);
+                newKeyValues[index] = NewMemberFromCtx(ref ctx);
                 Array.Copy(_keyvalues, index, newKeyValues, index + 1, _keyvalues.Length - index);
                 var leaf = this;
                 if (ctx.TransactionId != TransactionId)
@@ -160,7 +160,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             if (index < keyCountLeft)
             {
                 Array.Copy(_keyvalues, 0, leftNode._keyvalues, 0, index);
-                leftNode._keyvalues[index] = NewMemberFromCtx(ctx);
+                leftNode._keyvalues[index] = NewMemberFromCtx(ref ctx);
                 Array.Copy(_keyvalues, index, leftNode._keyvalues, index + 1, keyCountLeft - index - 1);
                 Array.Copy(_keyvalues, keyCountLeft - 1, rightNode._keyvalues, 0, keyCountRight);
                 ctx.Stack.Add(new NodeIdxPair { Node = leftNode, Idx = index });
@@ -170,7 +170,7 @@ namespace BTDB.KVDBLayer.BTreeMem
             {
                 Array.Copy(_keyvalues, 0, leftNode._keyvalues, 0, keyCountLeft);
                 Array.Copy(_keyvalues, keyCountLeft, rightNode._keyvalues, 0, index - keyCountLeft);
-                rightNode._keyvalues[index - keyCountLeft] = NewMemberFromCtx(ctx);
+                rightNode._keyvalues[index - keyCountLeft] = NewMemberFromCtx(ref ctx);
                 Array.Copy(_keyvalues, index, rightNode._keyvalues, index - keyCountLeft + 1, keyCountLeft + keyCountRight - 1 - index);
                 ctx.Stack.Add(new NodeIdxPair { Node = rightNode, Idx = index - keyCountLeft });
                 ctx.SplitInRight = true;
@@ -215,12 +215,12 @@ namespace BTDB.KVDBLayer.BTreeMem
             return result;
         }
 
-        static BTreeLeafMember NewMemberFromCtx(CreateOrUpdateCtx ctx)
+        static BTreeLeafMember NewMemberFromCtx(ref CreateOrUpdateCtx ctx)
         {
             return new BTreeLeafMember
                 {
                     Key = ctx.WholeKey(),
-                    Value = ctx.Value.ToByteArray()
+                    Value = ctx.Value.ToArray()
                 };
         }
 

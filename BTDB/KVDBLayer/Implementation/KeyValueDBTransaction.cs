@@ -51,6 +51,14 @@ namespace BTDB.KVDBLayer
             InvalidateCurrentKey();
         }
 
+        public void SetKeyPrefix(Span<byte> prefix)
+        {
+            _prefix = prefix.ToArray();
+            _prefixKeyStart = _prefix.Length == 0 ? 0 : -1;
+            _prefixKeyCount = -1;
+            InvalidateCurrentKey();
+        }
+
         public bool FindFirstKey()
         {
             return SetKeyIndex(0);
@@ -113,13 +121,35 @@ namespace BTDB.KVDBLayer
             var ctx = new CreateOrUpdateCtx
             {
                 KeyPrefix = _prefix,
+                Key = key.ToSpan(),
+                ValueFileId = valueFileId,
+                ValueOfs = valueOfs,
+                ValueSize = valueSize,
+                Stack = _stack
+            };
+            BtreeRoot.CreateOrUpdate(ref ctx);
+            _keyIndex = ctx.KeyIndex;
+            if (ctx.Created && _prefixKeyCount >= 0) _prefixKeyCount++;
+            return ctx.Created;
+        }
+
+        public bool CreateOrUpdateKeyValue(Span<byte> key, Span<byte> value)
+        {
+            MakeWrittable();
+            uint valueFileId;
+            uint valueOfs;
+            int valueSize;
+            _keyValueDB.WriteCreateOrUpdateCommand(_prefix, key, value, out valueFileId, out valueOfs, out valueSize);
+            var ctx = new CreateOrUpdateCtx
+            {
+                KeyPrefix = _prefix,
                 Key = key,
                 ValueFileId = valueFileId,
                 ValueOfs = valueOfs,
                 ValueSize = valueSize,
                 Stack = _stack
             };
-            BtreeRoot.CreateOrUpdate(ctx);
+            BtreeRoot.CreateOrUpdate(ref ctx);
             _keyIndex = ctx.KeyIndex;
             if (ctx.Created && _prefixKeyCount >= 0) _prefixKeyCount++;
             return ctx.Created;
@@ -246,6 +276,28 @@ namespace BTDB.KVDBLayer
             try
             {
                 return _keyValueDB.ReadValue(leafMember.ValueFileId, leafMember.ValueOfs, leafMember.ValueSize);
+            }
+            catch (BTDBException ex)
+            {
+                throw new BTDBException($"GetValue failed in TrId:{BtreeRoot.TransactionId},TRL:{BtreeRoot.TrLogFileId},Ofs:{BtreeRoot.TrLogOffset},ComUlong:{BtreeRoot.CommitUlong} and LastTrId:{_keyValueDB.LastCommited.TransactionId},ComUlong:{_keyValueDB.LastCommited.CommitUlong} OldestTrId:{_keyValueDB.OldestRoot.TransactionId},TRL:{_keyValueDB.OldestRoot.TrLogFileId},ComUlong:{_keyValueDB.OldestRoot.CommitUlong} innerMessage:{ex.Message}", ex);
+            }
+        }
+
+        public Span<byte> GetKeyAsSpan()
+        {
+            if (!IsValidKey()) return Span<byte>.Empty;
+            var wholeKey = GetCurrentKeyFromStack();
+            return new Span<byte>(wholeKey.Buffer, wholeKey.Offset + _prefix.Length, wholeKey.Length - _prefix.Length);
+        }
+
+        public Span<byte> GetValueAsSpan()
+        {
+            if (!IsValidKey()) return Span<byte>.Empty;
+            var nodeIdxPair = _stack[_stack.Count - 1];
+            var leafMember = ((IBTreeLeafNode)nodeIdxPair.Node).GetMemberValue(nodeIdxPair.Idx);
+            try
+            {
+                return _keyValueDB.ReadValue(leafMember.ValueFileId, leafMember.ValueOfs, leafMember.ValueSize).ToSpan();
             }
             catch (BTDBException ex)
             {

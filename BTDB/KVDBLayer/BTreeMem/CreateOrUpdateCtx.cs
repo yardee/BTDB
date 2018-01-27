@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
-using BTDB.Buffer;
 
 namespace BTDB.KVDBLayer.BTreeMem
 {
-    class CreateOrUpdateCtx
+    struct CreateOrUpdateCtx
     {
         internal byte[] KeyPrefix;
-        internal ByteBuffer Key;
-        internal ByteBuffer Value;
+        internal Span<byte> Key;
+        internal Span<byte> Value;
 
         internal bool Created;
         internal List<NodeIdxPair> Stack;
@@ -28,11 +27,11 @@ namespace BTDB.KVDBLayer.BTreeMem
         {
             if (KeyPrefix.Length == 0)
             {
-                return Key.ToByteArray();
+                return Key.ToArray();
             }
             var result = new byte[KeyPrefix.Length + Key.Length];
             Array.Copy(KeyPrefix, result, KeyPrefix.Length);
-            Array.Copy(Key.Buffer, Key.Offset, result, KeyPrefix.Length, Key.Length);
+            Key.CopyTo(new Span<byte>(result, KeyPrefix.Length, Key.Length));
             return result;
         }
     }
