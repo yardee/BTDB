@@ -541,9 +541,9 @@ namespace BTDB.ODBLayer
         void SaveListPrefixBytes(uint secondaryKeyIndex, IILGen ilGenerator, string methodName, ParameterInfo[] methodParameters,
             IDictionary<string, MethodInfo> apartFields)
         {
-            var writerLoc = ilGenerator.DeclareLocal(typeof(SpanWriter));
+            var writerLoc = ilGenerator.DeclareLocal(typeof(ByteBufferWriter));
             ilGenerator
-                .Newobj(() => new SpanWriter())
+                .Newobj(() => new ByteBufferWriter())
                 .Stloc(writerLoc);
 
             Action<IILGen> pushWriter = il => il.Ldloc(writerLoc);
@@ -559,16 +559,16 @@ namespace BTDB.ODBLayer
             SaveMethodParameters(ilGenerator, methodName, methodParameters, paramCount, apartFields,
                 secondaryKeyFields, writerLoc);
 
-            var dataGetter = typeof(SpanWriter).GetProperty("Data").GetGetMethod(true);
+            var dataGetter = typeof(ByteBufferWriter).GetProperty("Data").GetGetMethod(true);
             ilGenerator.Ldloc(writerLoc).Callvirt(dataGetter);
         }
 
         void SavePKListPrefixBytes(IILGen ilGenerator, string methodName, ParameterInfo[] methodParameters,
                                          IDictionary<string, MethodInfo> apartFields)
         {
-            var writerLoc = ilGenerator.DeclareLocal(typeof(SpanWriter));
+            var writerLoc = ilGenerator.DeclareLocal(typeof(ByteBufferWriter));
             ilGenerator
-                .Newobj(() => new SpanWriter())
+                .Newobj(() => new ByteBufferWriter())
                 .Stloc(writerLoc);
 
             Action<IILGen> pushWriter = il => il.Ldloc(writerLoc);
@@ -579,7 +579,7 @@ namespace BTDB.ODBLayer
             SaveMethodParameters(ilGenerator, methodName, methodParameters, paramCount, apartFields,
                 keyFields, writerLoc);
 
-            var dataGetter = typeof(SpanWriter).GetProperty("Data").GetGetMethod(true);
+            var dataGetter = typeof(ByteBufferWriter).GetProperty("Data").GetGetMethod(true);
             ilGenerator.Ldloc(writerLoc).Callvirt(dataGetter);
         }
 
