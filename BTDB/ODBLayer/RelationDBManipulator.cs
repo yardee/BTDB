@@ -356,9 +356,9 @@ namespace BTDB.ODBLayer
             _transaction.KeyValueDBTransaction.SetKeyPrefix(ObjectDB.AllRelationsSKPrefix);
         }
 
-        ByteBuffer WriteSecondaryKeyKey(uint secondaryKeyIndex, T obj)
+        Span<byte> WriteSecondaryKeyKey(uint secondaryKeyIndex, T obj)
         {
-            var keyWriter = new ByteBufferWriter();
+            var keyWriter = new SpanWriter();
             var keySaver = _relationInfo.GetSecondaryKeysKeySaver(secondaryKeyIndex);
             keyWriter.WriteVUInt32(_relationInfo.Id);
             keyWriter.WriteVUInt32(secondaryKeyIndex); //secondary key index
@@ -366,9 +366,9 @@ namespace BTDB.ODBLayer
             return keyWriter.Data;
         }
 
-        ByteBuffer WriteSecondaryKeyKey(uint secondaryKeyIndex, Span<byte> keyBytes, Span<byte> valueBytes)
+        Span<byte> WriteSecondaryKeyKey(uint secondaryKeyIndex, Span<byte> keyBytes, Span<byte> valueBytes)
         {
-            var keyWriter = new ByteBufferWriter();
+            var keyWriter = new SpanWriter();
             keyWriter.WriteVUInt32(_relationInfo.Id);
             keyWriter.WriteVUInt32(secondaryKeyIndex);
 
@@ -387,11 +387,11 @@ namespace BTDB.ODBLayer
             foreach (var sk in _relationInfo.ClientRelationVersionInfo.SecondaryKeys)
             {
                 var keyBytes = WriteSecondaryKeyKey(sk.Key, obj);
-                _transaction.KeyValueDBTransaction.CreateOrUpdateKeyValue(keyBytes, EmptyBuffer);
+                _transaction.KeyValueDBTransaction.CreateOrUpdateKeyValue(keyBytes, Span<byte>.Empty);
             }
         }
 
-        static bool ByteBuffersHasSameContent(ByteBuffer a, ByteBuffer b)
+        static bool SpansHasSameContent(Span<byte> a, Span<byte> b) //todo faster
         {
             if (a.Length != b.Length)
                 return false;
@@ -412,14 +412,14 @@ namespace BTDB.ODBLayer
             {
                 var newKeyBytes = WriteSecondaryKeyKey(sk.Key, newValue);
                 var oldKeyBytes = WriteSecondaryKeyKey(sk.Key, oldKey, oldValue);
-                if (ByteBuffersHasSameContent(oldKeyBytes, newKeyBytes))
+                if (SpansHasSameContent(oldKeyBytes, newKeyBytes))
                     continue;
                 //remove old index
                 if (_transaction.KeyValueDBTransaction.Find(oldKeyBytes) != FindResult.Exact)
                     throw new BTDBException("Error in updating secondary indexes, previous index entry not found.");
                 _transaction.KeyValueDBTransaction.EraseCurrent();
                 //insert new value
-                _transaction.KeyValueDBTransaction.CreateOrUpdateKeyValue(newKeyBytes, EmptyBuffer);
+                _transaction.KeyValueDBTransaction.CreateOrUpdateKeyValue(newKeyBytes, Span<byte>.Empty);
             }
         }
 

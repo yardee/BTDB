@@ -1,3 +1,4 @@
+using System;
 using BTDB.Buffer;
 
 namespace BTDB.KVDBLayer.BTreeMem
@@ -7,5 +8,6 @@ namespace BTDB.KVDBLayer.BTreeMem
         ByteBuffer GetKey(int idx);
         ByteBuffer GetMemberValue(int idx);
         void SetMemberValue(int idx, ByteBuffer value);
+        void SetMemberValue(int idx, Span<byte> value);
     }
 }

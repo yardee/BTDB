@@ -379,6 +379,11 @@ namespace BTDBTest
                 _keyValueDBTransaction.SetValue(value);
             }
 
+            public void SetValue(Span<byte> value)
+            {
+                _keyValueDBTransaction.SetValue(value);
+            }
+
             public void EraseCurrent()
             {
                 EraseCurrentCount++;

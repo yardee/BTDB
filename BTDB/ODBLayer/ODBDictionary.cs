@@ -217,22 +217,22 @@ namespace BTDB.ODBLayer
 
         public bool IsReadOnly => false;
 
-        byte[] KeyToByteArray(TKey key)
+        Span<byte> KeyToSpan(TKey key)
         {
-            var writer = new ByteBufferWriter();
+            var writer = new SpanWriter();
             IWriterCtx ctx = null;
             if (_keyHandler.NeedsCtx()) ctx = new DBWriterCtx(_tr, writer);
             _keyWriter(key, writer, ctx);
-            return writer.Data.ToByteArray();
+            return writer.Data;
         }
 
-        byte[] ValueToByteArray(TValue value)
+        Span<byte> ValueToSpan(TValue value)
         {
-            var writer = new ByteBufferWriter();
+            var writer = new SpanWriter();
             IWriterCtx ctx = null;
             if (_valueHandler.NeedsCtx()) ctx = new DBWriterCtx(_tr, writer);
             _valueWriter(value, writer, ctx);
-            return writer.Data.ToByteArray();
+            return writer.Data;
         }
 
         TKey ByteArrayToKey(byte[] data)
@@ -253,7 +253,7 @@ namespace BTDB.ODBLayer
 
         public bool ContainsKey(TKey key)
         {
-            var keyBytes = KeyToByteArray(key);
+            var keyBytes = KeyToSpan(key);
             _keyValueTrProtector.Start();
             _keyValueTr.SetKeyPrefix(_prefix);
             return _keyValueTr.FindExactKey(keyBytes);
@@ -261,8 +261,8 @@ namespace BTDB.ODBLayer
 
         public void Add(TKey key, TValue value)
         {
-            var keyBytes = KeyToByteArray(key);
-            var valueBytes = ValueToByteArray(value);
+            var keyBytes = KeyToSpan(key);
+            var valueBytes = ValueToSpan(value);
             _keyValueTrProtector.Start();
             _modificationCounter++;
             _keyValueTr.SetKeyPrefix(_prefix);
@@ -270,13 +270,13 @@ namespace BTDB.ODBLayer
             {
                 throw new ArgumentException("Cannot Add duplicate key to Dictionary");
             }
-            _keyValueTr.CreateOrUpdateKeyValueUnsafe(keyBytes, valueBytes);
+            _keyValueTr.CreateOrUpdateKeyValue(keyBytes, valueBytes);
             NotifyAdded();
         }
 
         public bool Remove(TKey key)
         {
-            var keyBytes = KeyToByteArray(key);
+            var keyBytes = KeyToSpan(key);
             _keyValueTrProtector.Start();
             _modificationCounter++;
             _keyValueTr.SetKeyPrefix(_prefix);
@@ -291,7 +291,7 @@ namespace BTDB.ODBLayer
 
         public bool TryGetValue(TKey key, out TValue value)
         {
-            var keyBytes = KeyToByteArray(key);
+            var keyBytes = KeyToSpan(key);
             _keyValueTrProtector.Start();
             _keyValueTr.SetKeyPrefix(_prefix);
             var found = _keyValueTr.FindExactKey(keyBytes);
@@ -309,7 +309,7 @@ namespace BTDB.ODBLayer
         {
             get
             {
-                var keyBytes = KeyToByteArray(key);
+                var keyBytes = KeyToSpan(key);
                 _keyValueTrProtector.Start();
                 _keyValueTr.SetKeyPrefix(_prefix);
                 var found = _keyValueTr.FindExactKey(keyBytes);
@@ -322,8 +322,8 @@ namespace BTDB.ODBLayer
             }
             set
             {
-                var keyBytes = KeyToByteArray(key);
-                var valueBytes = ValueToByteArray(value);
+                var keyBytes = KeyToSpan(key);
+                var valueBytes = ValueToSpan(value);
                 _keyValueTrProtector.Start();
                 _keyValueTr.SetKeyPrefix(_prefix);
                 if (_keyValueTr.CreateOrUpdateKeyValue(keyBytes, valueBytes))
@@ -612,7 +612,7 @@ namespace BTDB.ODBLayer
 
         public IEnumerable<KeyValuePair<TKey, TValue>> GetIncreasingEnumerator(TKey start)
         {
-            var startKeyBytes = KeyToByteArray(start);
+            var startKeyBytes = KeyToSpan(start);
             long prevProtectionCounter = 0;
             var prevModificationCounter = 0;
             long pos = 0;
@@ -624,7 +624,7 @@ namespace BTDB.ODBLayer
                     prevModificationCounter = _modificationCounter;
                     _keyValueTr.SetKeyPrefix(_prefix);
                     bool startOk;
-                    switch (_keyValueTr.Find(ByteBuffer.NewSync(startKeyBytes)))
+                    switch (_keyValueTr.Find(startKeyBytes))
                     {
                         case FindResult.Exact:
                         case FindResult.Next:
@@ -668,7 +668,7 @@ namespace BTDB.ODBLayer
 
         public IEnumerable<KeyValuePair<TKey, TValue>> GetDecreasingEnumerator(TKey start)
         {
-            var startKeyBytes = KeyToByteArray(start);
+            var startKeyBytes = KeyToSpan(start);
             long prevProtectionCounter = 0;
             var prevModificationCounter = 0;
             var pos = long.MaxValue;
@@ -680,7 +680,7 @@ namespace BTDB.ODBLayer
                     prevModificationCounter = _modificationCounter;
                     _keyValueTr.SetKeyPrefix(_prefix);
                     bool startOk;
-                    switch (_keyValueTr.Find(ByteBuffer.NewSync(startKeyBytes)))
+                    switch (_keyValueTr.Find(startKeyBytes))
                     {
                         case FindResult.Exact:
                         case FindResult.Previous:
@@ -724,12 +724,12 @@ namespace BTDB.ODBLayer
 
         public long RemoveRange(TKey start, bool includeStart, TKey end, bool includeEnd)
         {
-            var startKeyBytes = KeyToByteArray(start);
-            var endKeyBytes = KeyToByteArray(end);
+            var startKeyBytes = KeyToSpan(start);
+            var endKeyBytes = KeyToSpan(end);
             _keyValueTrProtector.Start();
             _modificationCounter++;
             _keyValueTr.SetKeyPrefix(_prefix);
-            var result = _keyValueTr.Find(ByteBuffer.NewAsync(startKeyBytes));
+            var result = _keyValueTr.Find(startKeyBytes);
             if (result == FindResult.NotFound) return 0;
             var startIndex = _keyValueTr.GetKeyIndex();
             if (result == FindResult.Exact)
@@ -740,7 +740,7 @@ namespace BTDB.ODBLayer
             {
                 startIndex++;
             }
-            result = _keyValueTr.Find(ByteBuffer.NewAsync(endKeyBytes));
+            result = _keyValueTr.Find(endKeyBytes);
             var endIndex = _keyValueTr.GetKeyIndex();
             if (result == FindResult.Exact)
             {
@@ -791,7 +791,7 @@ namespace BTDB.ODBLayer
 
         public KeyValuePair<uint, uint> QuerySizeByKey(TKey key)
         {
-            var keyBytes = KeyToByteArray(key);
+            var keyBytes = KeyToSpan(key);
             _keyValueTrProtector.Start();
             _keyValueTr.SetKeyPrefix(_prefix);
             var found = _keyValueTr.FindExactKey(keyBytes);
@@ -836,8 +836,8 @@ namespace BTDB.ODBLayer
                 }
                 else
                 {
-                    var keyBytes = _owner.KeyToByteArray(param.End);
-                    switch (_keyValueTr.Find(ByteBuffer.NewSync(keyBytes)))
+                    var keyBytes = _owner.KeyToSpan(param.End);
+                    switch (_keyValueTr.Find(keyBytes))
                     {
                         case FindResult.Exact:
                             endIndex = _keyValueTr.GetKeyIndex();
@@ -865,8 +865,8 @@ namespace BTDB.ODBLayer
                 }
                 else
                 {
-                    var keyBytes = _owner.KeyToByteArray(param.Start);
-                    switch (_keyValueTr.Find(ByteBuffer.NewSync(keyBytes)))
+                    var keyBytes = _owner.KeyToSpan(param.Start);
+                    switch (_keyValueTr.Find(keyBytes))
                     {
                         case FindResult.Exact:
                             startIndex = _keyValueTr.GetKeyIndex();
@@ -937,7 +937,7 @@ namespace BTDB.ODBLayer
                         Seek();
                     }
                     _prevProtectionCounter = _keyValueTrProtector.ProtectionCounter;
-                    var valueBytes = _owner.ValueToByteArray(value);
+                    var valueBytes = _owner.ValueToSpan(value);
                     _keyValueTr.SetValue(valueBytes);
                 }
             }

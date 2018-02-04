@@ -102,11 +102,11 @@ namespace BTDB.ODBLayer
             {
                 ClientTypeVersion = LastPersistedVersion + 1;
                 _relationVersions.Add(ClientTypeVersion, ClientRelationVersionInfo);
-                var writerk = new ByteBufferWriter();
+                var writerk = new SpanWriter();
                 writerk.WriteByteArrayRaw(ObjectDB.RelationVersionsPrefix);
                 writerk.WriteVUInt32(_id);
                 writerk.WriteVUInt32(ClientTypeVersion);
-                var writerv = new ByteBufferWriter();
+                var writerv = new SpanWriter();
                 ClientRelationVersionInfo.Save(writerv);
                 tr.KeyValueDBTransaction.SetKeyPrefix(ByteBuffer.NewEmpty());
                 tr.KeyValueDBTransaction.CreateOrUpdateKeyValue(writerk.Data, writerv.Data);
@@ -248,7 +248,7 @@ namespace BTDB.ODBLayer
 
         void SetPrefixToSecondaryKey(IKeyValueDBTransaction keyValueTr, uint index)
         {
-            var writer = new ByteBufferWriter();
+            var writer = new SpanWriter();
             writer.WriteBlock(ObjectDB.AllRelationsSKPrefix);
             writer.WriteVUInt32(Id);
             writer.WriteVUInt32(index);
@@ -295,7 +295,7 @@ namespace BTDB.ODBLayer
         void LoadUnresolvedVersionInfos(IKeyValueDBTransaction tr)
         {
             LastPersistedVersion = 0;
-            var writer = new ByteBufferWriter();
+            var writer = new SpanWriter();
             writer.WriteByteArrayRaw(ObjectDB.RelationVersionsPrefix);
             writer.WriteVUInt32(_id);
             tr.SetKeyPrefix(writer.Data);

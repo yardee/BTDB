@@ -343,6 +343,11 @@ namespace BTDB.KVDBLayer.BTree
             return ByteBuffer.NewAsync(_keyvalues[idx].Key);
         }
 
+        public Span<byte> GetKeyAsSpan(int idx)
+        {
+            return _keyvalues[idx].Key;
+        }
+
         public BTreeValue GetMemberValue(int idx)
         {
             var kv = _keyvalues[idx];

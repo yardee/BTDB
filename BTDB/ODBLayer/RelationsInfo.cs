@@ -37,20 +37,18 @@ namespace BTDB.ODBLayer
         internal RelationInfo CreateByName(IInternalObjectDBTransaction tr, string name, Type interfaceType)
         {
             name = string.Intern(name);
-            uint id;
-            if (!_name2Id.TryGetValue(name, out id))
+            if (!_name2Id.TryGetValue(name, out var id))
             {
                 id = _freeId++;
                 _name2Id[name] = id;
                 tr.KeyValueDBTransaction.SetKeyPrefixUnsafe(ObjectDB.RelationNamesPrefix);
-                var nameWriter = new ByteBufferWriter();
+                var nameWriter = new SpanWriter();
                 nameWriter.WriteString(name);
-                var idWriter = new ByteBufferWriter();
+                var idWriter = new SpanWriter();
                 idWriter.WriteVUInt32(id);
                 tr.KeyValueDBTransaction.CreateOrUpdateKeyValue(nameWriter.Data, idWriter.Data);
             }
-            RelationInfo relation;
-            if (_id2Relation.TryGetValue(id, out relation))
+            if (_id2Relation.TryGetValue(id, out var relation))
             {
                 throw new BTDBException($"Relation with name '{name}' was already initialized");
             }

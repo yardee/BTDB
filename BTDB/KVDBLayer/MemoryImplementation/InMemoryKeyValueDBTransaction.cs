@@ -298,6 +298,20 @@ namespace BTDB.KVDBLayer
             ((IBTreeLeafNode)nodeIdxPair.Node).SetMemberValue(nodeIdxPair.Idx, value);
         }
 
+        public void SetValue(Span<byte> value)
+        {
+            EnsureValidKey();
+            var keyIndexBackup = _keyIndex;
+            MakeWrittable();
+            if (_keyIndex != keyIndexBackup)
+            {
+                _keyIndex = keyIndexBackup;
+                BtreeRoot.FillStackByIndex(_stack, _keyIndex);
+            }
+            var nodeIdxPair = _stack[_stack.Count - 1];
+            ((IBTreeLeafNode)nodeIdxPair.Node).SetMemberValue(nodeIdxPair.Idx, value);
+        }
+
         public void EraseCurrent()
         {
             EnsureValidKey();

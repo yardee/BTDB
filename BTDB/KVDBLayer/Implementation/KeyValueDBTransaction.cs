@@ -136,10 +136,7 @@ namespace BTDB.KVDBLayer
         public bool CreateOrUpdateKeyValue(Span<byte> key, Span<byte> value)
         {
             MakeWrittable();
-            uint valueFileId;
-            uint valueOfs;
-            int valueSize;
-            _keyValueDB.WriteCreateOrUpdateCommand(_prefix, key, value, out valueFileId, out valueOfs, out valueSize);
+            _keyValueDB.WriteCreateOrUpdateCommand(_prefix, key, value, out var valueFileId, out var valueOfs, out var valueSize);
             var ctx = new CreateOrUpdateCtx
             {
                 KeyPrefix = _prefix,
@@ -326,6 +323,24 @@ namespace BTDB.KVDBLayer
             var nodeIdxPair = _stack[_stack.Count - 1];
             var memberValue = ((IBTreeLeafNode)nodeIdxPair.Node).GetMemberValue(nodeIdxPair.Idx);
             var memberKey = ((IBTreeLeafNode)nodeIdxPair.Node).GetKey(nodeIdxPair.Idx);
+            _keyValueDB.WriteCreateOrUpdateCommand(BitArrayManipulation.EmptyByteArray, memberKey, value, out memberValue.ValueFileId, out memberValue.ValueOfs, out memberValue.ValueSize);
+            ((IBTreeLeafNode)nodeIdxPair.Node).SetMemberValue(nodeIdxPair.Idx, memberValue);
+        }
+
+
+        public void SetValue(Span<byte> value)
+        {
+            EnsureValidKey();
+            var keyIndexBackup = _keyIndex;
+            MakeWrittable();
+            if (_keyIndex != keyIndexBackup)
+            {
+                _keyIndex = keyIndexBackup;
+                BtreeRoot.FillStackByIndex(_stack, _keyIndex);
+            }
+            var nodeIdxPair = _stack[_stack.Count - 1];
+            var memberValue = ((IBTreeLeafNode)nodeIdxPair.Node).GetMemberValue(nodeIdxPair.Idx);
+            var memberKey = ((IBTreeLeafNode)nodeIdxPair.Node).GetKeyAsSpan(nodeIdxPair.Idx);
             _keyValueDB.WriteCreateOrUpdateCommand(BitArrayManipulation.EmptyByteArray, memberKey, value, out memberValue.ValueFileId, out memberValue.ValueOfs, out memberValue.ValueSize);
             ((IBTreeLeafNode)nodeIdxPair.Node).SetMemberValue(nodeIdxPair.Idx, memberValue);
         }

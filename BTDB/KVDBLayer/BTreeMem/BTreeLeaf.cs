@@ -318,5 +318,12 @@ namespace BTDB.KVDBLayer.BTreeMem
             kv.Value = value.ToByteArray();
             _keyvalues[idx] = kv;
         }
+
+        public void SetMemberValue(int idx, Span<byte> value)
+        {
+            var kv = _keyvalues[idx];
+            kv.Value = value.ToArray();
+            _keyvalues[idx] = kv;
+        }
     }
 }

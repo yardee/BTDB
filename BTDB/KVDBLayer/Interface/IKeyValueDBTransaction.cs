@@ -99,6 +99,7 @@ namespace BTDB.KVDBLayer
         /// Overwrite current value with new content.
         /// </summary>
         void SetValue(ByteBuffer value);
+        void SetValue(Span<byte> value);
 
         /// <summary>
         /// Remove current key and value. Current key will be invalidated.
