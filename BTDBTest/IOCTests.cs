@@ -1289,6 +1289,25 @@ public partial class IocTests
             BindingFlags.OptionalParamBinding, null, new[] { Type.Missing }, CultureInfo.CurrentCulture);
     }
 
+    internal sealed record RecordSealed
+    {
+        public string Name { get; init; } = "name";
+    }
+
+    [Fact]
+    public void ResolveRecordSealed()
+    {
+        var expected = new RecordSealed();
+
+        var containerBuilder = new ContainerBuilder();
+        containerBuilder.RegisterTypeWithFallback(typeof(RecordSealed));
+        var container = containerBuilder.Build();
+
+        var actual = container.Resolve(typeof(RecordSealed));
+
+        Assert.Equal(expected, actual);
+    }
+
     internal class ClassWithRegisteredOptionalParam : OptionalClass<ClassWithInt32?>
     {
         public ClassWithRegisteredOptionalParam(ClassWithInt32? t = null) : base(t)
